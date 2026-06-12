@@ -3,32 +3,19 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Project = {
-  id: string
-  name: string
-  client: string
-  status: string
-  phase: string
-  start_date: string
-  end_date: string
-  budget: number
+  id: string; name: string; client: string; status: string
+  phase: string; start_date: string; end_date: string; budget: number
 }
 
 const PHASES = ['Tendering', 'Kickoff', 'Procurement', 'Installation', 'Testing', 'Warranty']
 const STATUSES = ['active', 'delayed', 'completed']
 
-const statusColor: Record<string, string> = {
-  active: 'bg-green-500/20 text-green-400',
-  delayed: 'bg-red-500/20 text-red-400',
-  completed: 'bg-gray-500/20 text-gray-400',
+const phaseBadge: Record<string, string> = {
+  Tendering: 'badge-purple', Kickoff: 'badge-blue', Procurement: 'badge-yellow',
+  Installation: 'badge-yellow', Testing: 'badge-green', Warranty: 'badge-gray',
 }
-
-const phaseColor: Record<string, string> = {
-  Tendering: 'bg-purple-500/20 text-purple-400',
-  Kickoff: 'bg-blue-500/20 text-blue-400',
-  Procurement: 'bg-yellow-500/20 text-yellow-400',
-  Installation: 'bg-orange-500/20 text-orange-400',
-  Testing: 'bg-cyan-500/20 text-cyan-400',
-  Warranty: 'bg-gray-500/20 text-gray-400',
+const statusBadge: Record<string, string> = {
+  active: 'badge-green', delayed: 'badge-red', completed: 'badge-gray',
 }
 
 export default function ProjectsPage() {
@@ -55,17 +42,11 @@ export default function ProjectsPage() {
     load()
   }
 
-  async function getAISummary() {
-    setAiLoading(true)
-    setAiSummary('')
-    const res = await fetch('/api/ai-summary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'projects', data: projects }),
-    })
+  async function getAI() {
+    setAiLoading(true); setAiSummary('')
+    const res = await fetch('/api/ai-summary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'projects', data: projects }) })
     const json = await res.json()
-    setAiSummary(json.summary)
-    setAiLoading(false)
+    setAiSummary(json.summary); setAiLoading(false)
   }
 
   const totalBudget = projects.reduce((s, p) => s + (p.budget || 0), 0)
@@ -73,101 +54,92 @@ export default function ProjectsPage() {
   const active = projects.filter(p => p.status === 'active').length
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
+    <div className="fade-in">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-semibold">Projects</h1>
-          <p className="text-gray-400 text-sm mt-1">Track all fire safety system projects</p>
+          <h1 className="page-title">Projects</h1>
+          <p className="page-subtitle">Track every fire safety installation from bid to warranty</p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={getAISummary} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-            {aiLoading ? '...' : '✦ AI Summary'}
-          </button>
-          <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium transition-colors">
-            + Add Project
-          </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-ai" onClick={getAI}>{aiLoading ? '...' : '✦ AI Summary'}</button>
+          <button className="btn-primary" onClick={() => setShowForm(!showForm)}>+ New Project</button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <p className="text-gray-400 text-sm">Total Projects</p>
-          <p className="text-3xl font-bold mt-1">{projects.length}</p>
-          <p className="text-xs text-green-400 mt-1">{active} active</p>
+      <div className="stats-grid">
+        <div className="card-stat">
+          <div className="stat-label">Total Projects</div>
+          <div className="stat-value">{projects.length}</div>
+          <div className="stat-sub" style={{ color: 'var(--green)' }}>{active} active</div>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <p className="text-gray-400 text-sm">Delayed</p>
-          <p className="text-3xl font-bold mt-1 text-red-400">{delayed}</p>
-          <p className="text-xs text-gray-500 mt-1">needs attention</p>
+        <div className="card-stat">
+          <div className="stat-label">Delayed</div>
+          <div className="stat-value" style={{ color: delayed > 0 ? 'var(--red)' : 'var(--text)' }}>{delayed}</div>
+          <div className="stat-sub">need attention</div>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <p className="text-gray-400 text-sm">Total Budget</p>
-          <p className="text-3xl font-bold mt-1">₹{(totalBudget / 100000).toFixed(1)}L</p>
-          <p className="text-xs text-gray-500 mt-1">across all projects</p>
+        <div className="card-stat">
+          <div className="stat-label">Total Budget</div>
+          <div className="stat-value">₹{(totalBudget / 100000).toFixed(1)}L</div>
+          <div className="stat-sub">across all projects</div>
+        </div>
+        <div className="card-stat">
+          <div className="stat-label">Completed</div>
+          <div className="stat-value">{projects.filter(p => p.status === 'completed').length}</div>
+          <div className="stat-sub">delivered</div>
         </div>
       </div>
 
-      {/* AI Summary */}
       {aiSummary && (
-        <div className="mb-6 bg-purple-950/50 border border-purple-800/50 rounded-xl p-5">
-          <p className="text-xs text-purple-400 font-medium mb-2">✦ AI ANALYSIS</p>
-          <p className="text-sm text-gray-200 leading-relaxed">{aiSummary}</p>
+        <div className="ai-box fade-in">
+          <div style={{ fontSize: 11, color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.06em', marginBottom: 8 }}>✦ AI ANALYSIS</div>
+          <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>{aiSummary}</div>
         </div>
       )}
 
-      {/* Add Form */}
       {showForm && (
-        <div className="mb-6 bg-gray-900 border border-gray-700 rounded-xl p-6">
-          <h3 className="font-medium mb-4">New Project</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <input className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" placeholder="Project name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            <input className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" placeholder="Client name" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} />
-            <select className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" value={form.phase} onChange={e => setForm({ ...form, phase: e.target.value })}>
+        <div className="form-box fade-in">
+          <div style={{ fontWeight: 600, marginBottom: 16, fontSize: 15 }}>New Project</div>
+          <div className="form-grid">
+            <input className="input" placeholder="Project name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            <input className="input" placeholder="Client name" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} />
+            <select className="input" value={form.phase} onChange={e => setForm({ ...form, phase: e.target.value })}>
               {PHASES.map(p => <option key={p}>{p}</option>)}
             </select>
-            <select className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+            <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
               {STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
-            <input type="date" className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
-            <input type="date" className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
-            <input type="number" className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" placeholder="Budget (₹)" value={form.budget} onChange={e => setForm({ ...form, budget: e.target.value })} />
+            <input type="date" className="input" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+            <input type="date" className="input" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
+            <input type="number" className="input" placeholder="Budget (₹)" value={form.budget} onChange={e => setForm({ ...form, budget: e.target.value })} />
           </div>
-          <div className="flex gap-3 mt-4">
-            <button onClick={addProject} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg text-sm font-medium">Save Project</button>
-            <button onClick={() => setShowForm(false)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm">Cancel</button>
+          <div className="form-actions">
+            <button className="btn-primary" onClick={addProject}>Save Project</button>
+            <button className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card">
+        <table>
           <thead>
-            <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wider">
-              <th className="text-left px-6 py-4">Project</th>
-              <th className="text-left px-6 py-4">Client</th>
-              <th className="text-left px-6 py-4">Phase</th>
-              <th className="text-left px-6 py-4">Status</th>
-              <th className="text-left px-6 py-4">Budget</th>
-              <th className="text-left px-6 py-4">Start Date</th>
-              <th className="text-left px-6 py-4">End Date</th>
+            <tr>
+              <th>Project</th><th>Client</th><th>Phase</th><th>Status</th><th>Budget</th><th>Start</th><th>End</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-12 text-gray-500">Loading...</td></tr>
+              <tr><td colSpan={7} className="empty-state">Loading...</td></tr>
             ) : projects.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-12 text-gray-500">No projects yet. Add your first project.</td></tr>
+              <tr><td colSpan={7} className="empty-state">No projects yet — add your first one above</td></tr>
             ) : projects.map(p => (
-              <tr key={p.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                <td className="px-6 py-4 font-medium">{p.name}</td>
-                <td className="px-6 py-4 text-gray-400">{p.client}</td>
-                <td className="px-6 py-4"><span className={`px-2 py-1 rounded-md text-xs font-medium ${phaseColor[p.phase] || 'bg-gray-700 text-gray-300'}`}>{p.phase}</span></td>
-                <td className="px-6 py-4"><span className={`px-2 py-1 rounded-md text-xs font-medium capitalize ${statusColor[p.status]}`}>{p.status}</span></td>
-                <td className="px-6 py-4 text-gray-300">₹{p.budget ? (p.budget / 100000).toFixed(1) + 'L' : '—'}</td>
-                <td className="px-6 py-4 text-gray-400">{p.start_date || '—'}</td>
-                <td className="px-6 py-4 text-gray-400">{p.end_date || '—'}</td>
+              <tr key={p.id}>
+                <td>{p.name}</td>
+                <td>{p.client}</td>
+                <td><span className={`badge ${phaseBadge[p.phase] || 'badge-gray'}`}>{p.phase}</span></td>
+                <td><span className={`badge ${statusBadge[p.status]}`}>{p.status}</span></td>
+                <td>₹{p.budget ? (p.budget / 100000).toFixed(1) + 'L' : '—'}</td>
+                <td>{p.start_date || '—'}</td>
+                <td>{p.end_date || '—'}</td>
               </tr>
             ))}
           </tbody>
